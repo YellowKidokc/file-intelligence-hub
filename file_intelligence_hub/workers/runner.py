@@ -7,7 +7,9 @@ from pathlib import Path
 
 from file_intelligence_hub.core.job_manager import JobManager
 from file_intelligence_hub.storage.db import Database
+from file_intelligence_hub.storage.intelligence_repo import IntelligenceRepo
 from file_intelligence_hub.storage.job_repo import JobRepo
+from file_intelligence_hub.workers.folder_summary_worker import FolderSummaryWorker
 
 
 class WorkerRunner:
@@ -20,8 +22,21 @@ class WorkerRunner:
         if not job:
             return None
         if job["type"] == "file_event":
-            return self.manager.process_file_event(job["id"])
-        return self.repo.update_job(job["id"], status="failed", error=f"unsupported job type: {job['type']}")
+            try:
+                return self.manager.process_file_event(job["id"])
+            except FileNotFoundError as exc:
+                return self.repo.update_job(job["id"], status="failed_retryable", error=str(exc))
+            except (PermissionError, OSError, ValueError) as exc:
+                return self.repo.update_job(job["id"], status="failed_terminal", error=str(exc))
+        if job["type"] == "folder_summary":
+            try:
+                summary = FolderSummaryWorker(IntelligenceRepo(self.repo.conn), self.repo).summarize_folder(job["payload"]["folder_path"])
+                return self.repo.update_job(job["id"], status="completed", result={"folder_summary": summary})
+            except FileNotFoundError as exc:
+                return self.repo.update_job(job["id"], status="failed_retryable", error=str(exc))
+            except (PermissionError, OSError, ValueError) as exc:
+                return self.repo.update_job(job["id"], status="failed_terminal", error=str(exc))
+        return self.repo.update_job(job["id"], status="failed_terminal", error=f"unsupported job type: {job['type']}")
 
     def run_once(self, *, limit: int | None = None) -> list[dict[str, object]]:
         processed: list[dict[str, object]] = []
@@ -49,9 +64,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--forever", action="store_true")
     parser.add_argument("--interval", type=float, default=1.0)
+    parser.add_argument("--requeue", type=int, help="requeue a failed_retryable or deferred job id")
     args = parser.parse_args(argv)
 
     runner = build_runner(args.db)
+    if args.requeue is not None:
+        runner.repo.requeue_job(args.requeue)
+        return 0
     if args.forever:
         runner.run_forever(interval=args.interval)
     else:

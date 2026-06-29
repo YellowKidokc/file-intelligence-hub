@@ -4,6 +4,8 @@ from __future__ import annotations
 import mimetypes
 from pathlib import Path
 
+from file_intelligence_hub.workers.parsers import parse_file_metadata
+
 CATEGORY_BY_SUFFIX = {
     ".txt": "text", ".md": "text", ".rst": "text", ".log": "text",
     ".py": "code", ".js": "code", ".ts": "code", ".html": "code", ".css": "code", ".json": "data",
@@ -48,19 +50,20 @@ def classify_file(path: str, hash_result: dict[str, object] | None = None) -> di
     suffix = file_path.suffix.lower()
     head = _read_head(file_path)
     mime_type, _ = mimetypes.guess_type(str(file_path))
+    parser_result = parse_file_metadata(str(file_path))
 
     for signature, category, reason in SIGNATURES:
         if head.startswith(signature):
-            return _payload(file_path, category, suffix, 0.99, reason, mime_type, hash_result)
+            return _payload(file_path, category, suffix, 0.99, reason, mime_type, hash_result, parser_result)
 
     if suffix in CATEGORY_BY_SUFFIX:
-        return _payload(file_path, CATEGORY_BY_SUFFIX[suffix], suffix, 0.9, "suffix", mime_type, hash_result)
+        return _payload(file_path, CATEGORY_BY_SUFFIX[suffix], suffix, 0.9, "suffix", mime_type, hash_result, parser_result)
 
     if _looks_textual(head):
         category = "code" if any(marker in head for marker in CODE_MARKERS) else "text"
-        return _payload(file_path, category, suffix, 0.75, "text_signature", mime_type, hash_result)
+        return _payload(file_path, category, suffix, 0.75, "text_signature", mime_type, hash_result, parser_result)
 
-    return _payload(file_path, "unknown", suffix, 0.4, "no_deterministic_match", mime_type, hash_result)
+    return _payload(file_path, "unknown", suffix, 0.4, "no_deterministic_match", mime_type, hash_result, parser_result)
 
 
 def _payload(
@@ -71,6 +74,7 @@ def _payload(
     reason: str,
     mime_type: str | None,
     hash_result: dict[str, object] | None,
+    parser_result: dict[str, object],
 ) -> dict[str, object]:
     return {
         "path": str(file_path),
@@ -81,4 +85,6 @@ def _payload(
         "confidence": confidence,
         "reason": reason,
         "hash": hash_result,
+        "parser": parser_result["parser"],
+        "metadata": parser_result["metadata"],
     }

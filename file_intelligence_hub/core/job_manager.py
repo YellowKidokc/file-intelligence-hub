@@ -32,7 +32,7 @@ class JobManager:
         if event["event_type"] == "deleted" or event.get("is_directory"):
             return self.repo.update_job(job_id, status="ignored", result={"reason": "not_a_rename_candidate", "event": event})
         if not Path(path).is_file():
-            return self.repo.update_job(job_id, status="failed", error=f"file not found: {path}")
+            return self.repo.update_job(job_id, status="failed_retryable", error=f"file not found: {path}")
 
         self.repo.update_job(job_id, status="running")
         hash_result = hash_file(path)

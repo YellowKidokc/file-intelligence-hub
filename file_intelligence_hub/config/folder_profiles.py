@@ -1,7 +1,4 @@
-"""Centralized folder profile loading and matching.
-
-Folder-specific behavior belongs here, not in scripts scattered through watched folders.
-"""
+"""Centralized folder profile loading, validation, and matching."""
 from __future__ import annotations
 
 import json
@@ -10,6 +7,12 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_PROFILE_PATH = Path("config/folder_profiles.json")
+SCHEMA_PATH = Path("schemas/folder_profiles.schema.json")
+PROFILE_KEYS = {"path", "folder_role", "watch_enabled", "review_only", "protected", "parser_preferences", "routing_hints", "thresholds"}
+
+
+class FolderProfileConfigError(ValueError):
+    """Raised when repo-centered folder profile config is invalid."""
 
 
 @dataclass(frozen=True)
@@ -34,7 +37,7 @@ class FolderProfile:
             protected=bool(data.get("protected", base.protected)),
             parser_preferences=list(data.get("parser_preferences", base.parser_preferences)),
             routing_hints=dict(data.get("routing_hints", base.routing_hints)),
-            thresholds=dict(data.get("thresholds", base.thresholds)),
+            thresholds={key: float(value) for key, value in dict(data.get("thresholds", base.thresholds)).items()},
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -61,6 +64,7 @@ class FolderProfileRegistry:
         if not config_path.exists():
             return cls()
         raw = json.loads(config_path.read_text(encoding="utf-8"))
+        validate_folder_profile_config(raw)
         default = FolderProfile.from_dict(raw.get("defaults", {}))
         profiles = [FolderProfile.from_dict(item, default) for item in raw.get("profiles", [])]
         return cls(default, profiles)
@@ -81,3 +85,46 @@ class FolderProfileRegistry:
             if best is None or score > best[0]:
                 best = (score, profile)
         return best[1] if best else self.default
+
+
+def validate_folder_profile_config(raw: Any) -> None:
+    """Validate the supported subset of the formal JSON schema with clear errors."""
+    if not isinstance(raw, dict):
+        raise FolderProfileConfigError("folder profile config must be an object")
+    unknown_root = set(raw) - {"defaults", "profiles"}
+    if unknown_root:
+        raise FolderProfileConfigError(f"unknown root keys: {sorted(unknown_root)}")
+    if "profiles" not in raw or not isinstance(raw["profiles"], list):
+        raise FolderProfileConfigError("profiles must be a list")
+    if "defaults" in raw:
+        _validate_profile(raw["defaults"], "defaults", require_path=False)
+    for index, profile in enumerate(raw["profiles"]):
+        _validate_profile(profile, f"profiles[{index}]", require_path=True)
+
+
+def _validate_profile(profile: Any, location: str, *, require_path: bool) -> None:
+    if not isinstance(profile, dict):
+        raise FolderProfileConfigError(f"{location} must be an object")
+    unknown = set(profile) - PROFILE_KEYS
+    if unknown:
+        raise FolderProfileConfigError(f"{location} has unknown keys: {sorted(unknown)}")
+    if require_path and not isinstance(profile.get("path"), str):
+        raise FolderProfileConfigError(f"{location}.path must be a string")
+    for key in ("path", "folder_role"):
+        if key in profile and not isinstance(profile[key], str):
+            raise FolderProfileConfigError(f"{location}.{key} must be a string")
+    for key in ("watch_enabled", "review_only", "protected"):
+        if key in profile and not isinstance(profile[key], bool):
+            raise FolderProfileConfigError(f"{location}.{key} must be a boolean")
+    if "parser_preferences" in profile and not _is_string_list(profile["parser_preferences"]):
+        raise FolderProfileConfigError(f"{location}.parser_preferences must be a list of strings")
+    if "routing_hints" in profile and not isinstance(profile["routing_hints"], dict):
+        raise FolderProfileConfigError(f"{location}.routing_hints must be an object")
+    if "thresholds" in profile:
+        thresholds = profile["thresholds"]
+        if not isinstance(thresholds, dict) or not all(isinstance(value, (int, float)) for value in thresholds.values()):
+            raise FolderProfileConfigError(f"{location}.thresholds must be an object of numbers")
+
+
+def _is_string_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)

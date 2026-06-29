@@ -29,6 +29,10 @@ class ReviewDecisionRequest(BaseModel):
     status: Literal["approved", "rejected", "deferred"]
 
 
+class FolderSummaryRequest(BaseModel):
+    folder_path: str
+
+
 def _repo() -> JobRepo:
     db = Database(DEFAULT_DB_PATH)
     return JobRepo(db.conn)
@@ -41,14 +45,28 @@ def create_file_event(request: FileEventRequest) -> dict[str, object]:
     return manager.ingest_file_event(request.model_dump(exclude={"source"}, exclude_none=True), source=request.source)
 
 
+@router.post("/jobs/folder-summaries")
+def create_folder_summary_job(request: FolderSummaryRequest) -> dict[str, object]:
+    return _repo().create_job("folder_summary", {"folder_path": request.folder_path})
+
+
 @router.get("/jobs")
 def list_jobs(status: str | None = None) -> dict[str, object]:
     return {"jobs": _repo().list_jobs(status=status)}
 
 
 @router.get("/reviews")
-def list_reviews(status: str | None = None) -> dict[str, object]:
-    return {"review_items": _repo().list_review_items(status=status)}
+def list_reviews(
+    status: str | None = None,
+    action: str | None = None,
+    folder_role: str | None = None,
+    older_than_hours: float | None = None,
+) -> dict[str, object]:
+    return {
+        "review_items": _repo().list_review_items(
+            status=status, action=action, folder_role=folder_role, older_than_hours=older_than_hours
+        )
+    }
 
 
 @router.get("/reviews/{review_id}")
@@ -64,7 +82,12 @@ def decide_review(review_id: int, request: ReviewDecisionRequest) -> dict[str, o
     repo = _repo()
     try:
         review = repo.decide_review_item(review_id, request.status)
-        result = apply_approved_review(repo, review_id) if request.status == "approved" else {"review": review}
+        if request.status == "approved":
+            result = apply_approved_review(repo, review_id)
+        elif request.status == "deferred":
+            result = repo.update_job(review["job_id"], status="deferred", result={"review": review})
+        else:
+            result = {"review": review}
         return {"review": review, "result": result}
     except (KeyError, ValueError, FileNotFoundError, FileExistsError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -83,3 +106,11 @@ def reject_review(review_id: int) -> dict[str, object]:
 @router.post("/reviews/{review_id}/defer")
 def defer_review(review_id: int) -> dict[str, object]:
     return decide_review(review_id, ReviewDecisionRequest(status="deferred"))
+
+
+@router.post("/jobs/{job_id}/requeue")
+def requeue_job(job_id: int) -> dict[str, object]:
+    try:
+        return {"job": _repo().requeue_job(job_id)}
+    except (KeyError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

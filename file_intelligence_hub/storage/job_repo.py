@@ -65,6 +65,13 @@ class JobRepo:
         self.conn.commit()
         return self.get_job(job_id)
 
+    def requeue_job(self, job_id: int) -> JsonDict:
+        job = self.get_job(job_id)
+        if job["status"] not in {"failed_retryable", "deferred"}:
+            raise ValueError("only failed_retryable or deferred jobs can be requeued")
+        self.add_ledger_entry(job_id=job_id, action="requeue_job", before={"status": job["status"]}, after={"status": "queued"})
+        return self.update_job(job_id, status="queued", result=job.get("result"), error=None)
+
     def create_review_item(self, job_id: int, *, reason: str, action: str, payload: JsonDict) -> JsonDict:
         cur = self.conn.execute(
             """
@@ -86,10 +93,40 @@ class JobRepo:
             "created_at": row["created_at"], "decided_at": row["decided_at"],
         }
 
-    def list_review_items(self, *, status: str | None = None) -> list[JsonDict]:
-        sql = "SELECT * FROM review_items" + (" WHERE status = ?" if status else "") + " ORDER BY id"
-        rows = self.conn.execute(sql, (status,) if status else ()).fetchall()
-        return [self.get_review_item(row["id"]) for row in rows]
+    def list_review_items(
+        self,
+        *,
+        status: str | None = None,
+        action: str | None = None,
+        folder_role: str | None = None,
+        older_than_hours: float | None = None,
+    ) -> list[JsonDict]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if status:
+            clauses.append("r.status = ?")
+            params.append(status)
+        if action:
+            clauses.append("r.action = ?")
+            params.append(action)
+        if older_than_hours is not None:
+            clauses.append("r.created_at <= datetime('now', ?)")
+            params.append(f"-{older_than_hours} hours")
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = self.conn.execute(f"SELECT r.* FROM review_items r{where} ORDER BY r.id", params).fetchall()
+        items = [self.get_review_item(row["id"]) for row in rows]
+        if folder_role:
+            items = [item for item in items if self._review_folder_role(item) == folder_role]
+        return items
+
+    def _review_folder_role(self, review: JsonDict) -> str | None:
+        try:
+            job = self.get_job(int(review["job_id"]))
+        except KeyError:
+            return None
+        result = job.get("result") or {}
+        profile = result.get("folder_profile") or (job.get("payload") or {}).get("folder_profile") or {}
+        return profile.get("folder_role")
 
     def next_queued_job(self) -> JsonDict | None:
         row = self.conn.execute(
