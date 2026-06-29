@@ -1,0 +1,14 @@
+[project]
+name = "file-intelligence-hub"
+version = "0.1.0"
+description = "Control plane for file-first automation"
+requires-python = ">=3.11"
+dependencies = ["fastapi>=0.110", "pydantic>=2"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[project.scripts]
+fihub-watch = "file_intelligence_hub.watchers.runner:main"
+fihub-worker = "file_intelligence_hub.workers.runner:main"
