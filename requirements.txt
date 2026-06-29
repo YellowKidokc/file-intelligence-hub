@@ -1,0 +1,15 @@
+docling
+tika
+fastembed
+openai
+watchdog
+psutil
+aiosqlite
+PyMuPDF
+beautifulsoup4
+lxml
+filetype
+openpyxl
+pandas
+python-docx
+pydantic

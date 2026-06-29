@@ -1,0 +1,56 @@
+{
+  "folder_path": "D:\\GitHub\\faiththruphysics-site-data\\academic",
+  "folder_role": "reference",
+  "description": "Canonical academic source surface for site-data imports.",
+  "watch": {
+    "enabled": true,
+    "include_subfolders": true,
+    "debounce_ms": 1500
+  },
+  "classify": {
+    "file_classifier": "local-plus-api",
+    "folder_summarizer": "local-plus-api",
+    "preferred_parsers": [
+      "pymupdf",
+      "beautifulsoup4",
+      "docling"
+    ],
+    "tag_sets": [
+      "master-equation",
+      "axioms",
+      "domains",
+      "file-family"
+    ]
+  },
+  "routing": {
+    "default_action": "review",
+    "destination_rules": [
+      {
+        "match": "extension:html",
+        "target": "D:\\GitHub\\faiththruphysics-site\\imports\\html",
+        "action": "copy"
+      },
+      {
+        "match": "tag:audio",
+        "target": "D:\\GitHub\\faiththruphysics-site\\imports\\audio",
+        "action": "copy"
+      }
+    ]
+  },
+  "thresholds": {
+    "delete_confirm_count": 100,
+    "rename_confirm_count": 100,
+    "move_confirm_count": 100,
+    "archive_confirm_count": 100
+  },
+  "resource_gates": {
+    "max_cpu_percent": 55,
+    "max_memory_percent": 80
+  },
+  "sidecars": {
+    "write_file_sidecars": true,
+    "write_folder_sidecars": true,
+    "file_sidecar_suffix": ".fmeta.md",
+    "folder_sidecar_name": "_folder.meta.md"
+  }
+}

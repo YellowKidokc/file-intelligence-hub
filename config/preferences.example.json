@@ -1,0 +1,18 @@
+{
+  "gui_is_primary_operator_surface": true,
+  "excel_is_audit_surface": true,
+  "bulk_confirmation_thresholds": {
+    "delete_count": 100,
+    "rename_count": 100,
+    "move_count": 100,
+    "archive_count": 100
+  },
+  "resource_gates": {
+    "max_cpu_percent": 55,
+    "max_memory_percent": 80
+  },
+  "api_defaults": {
+    "provider": "openai",
+    "model": "gpt-4o-mini"
+  }
+}

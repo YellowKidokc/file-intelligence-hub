@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://faiththruphysics.local/file-intelligence-hub/folder-config.schema.json",
+  "title": "Folder Automation Config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "folder_path",
+    "folder_role",
+    "watch",
+    "classify",
+    "routing"
+  ],
+  "properties": {
+    "folder_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "folder_role": {
+      "type": "string",
+      "enum": [
+        "inbox",
+        "working",
+        "archive",
+        "export",
+        "reference",
+        "api-outbox",
+        "api-inbox",
+        "html-source",
+        "audio-source",
+        "image-source",
+        "mixed"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "watch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "include_subfolders"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "include_subfolders": {
+          "type": "boolean"
+        },
+        "debounce_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1500
+        }
+      }
+    },
+    "classify": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file_classifier",
+        "folder_summarizer"
+      ],
+      "properties": {
+        "file_classifier": {
+          "type": "string",
+          "enum": [
+            "local-only",
+            "local-plus-api",
+            "api-first"
+          ]
+        },
+        "folder_summarizer": {
+          "type": "string",
+          "enum": [
+            "local-only",
+            "local-plus-api",
+            "api-first"
+          ]
+        },
+        "preferred_parsers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tag_sets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_action"
+      ],
+      "properties": {
+        "default_action": {
+          "type": "string",
+          "enum": [
+            "leave",
+            "copy",
+            "move",
+            "archive",
+            "review"
+          ]
+        },
+        "destination_rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "match",
+              "target"
+            ],
+            "properties": {
+              "match": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "copy",
+                  "move",
+                  "archive",
+                  "review"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "delete_confirm_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rename_confirm_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "move_confirm_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "archive_confirm_count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "resource_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_cpu_percent": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "max_memory_percent": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "sidecars": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "write_file_sidecars": {
+          "type": "boolean",
+          "default": true
+        },
+        "write_folder_sidecars": {
+          "type": "boolean",
+          "default": true
+        },
+        "file_sidecar_suffix": {
+          "type": "string",
+          "default": ".fmeta.md"
+        },
+        "folder_sidecar_name": {
+          "type": "string",
+          "default": "_folder.meta.md"
+        }
+      }
+    }
+  }
+}

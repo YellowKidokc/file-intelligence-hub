@@ -1,0 +1,91 @@
+{
+  "repo": "D:\\DONT TOUCH BOOT UP\\file-intelligence-hub",
+  "python": "3.12.10",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "packages": [
+    {
+      "package": "docling",
+      "module": "docling",
+      "installed": true,
+      "version": "unknown"
+    },
+    {
+      "package": "tika",
+      "module": "tika",
+      "installed": true,
+      "version": "3.1.0"
+    },
+    {
+      "package": "fastembed",
+      "module": "fastembed",
+      "installed": true,
+      "version": "0.8.0"
+    },
+    {
+      "package": "openai",
+      "module": "openai",
+      "installed": true,
+      "version": "2.44.0"
+    },
+    {
+      "package": "watchdog",
+      "module": "watchdog",
+      "installed": true,
+      "version": "unknown"
+    },
+    {
+      "package": "psutil",
+      "module": "psutil",
+      "installed": true,
+      "version": "7.2.2"
+    },
+    {
+      "package": "aiosqlite",
+      "module": "aiosqlite",
+      "installed": true,
+      "version": "0.22.1"
+    },
+    {
+      "package": "PyMuPDF",
+      "module": "fitz",
+      "installed": true,
+      "version": "1.28.0"
+    },
+    {
+      "package": "beautifulsoup4",
+      "module": "bs4",
+      "installed": true,
+      "version": "4.15.0"
+    },
+    {
+      "package": "lxml",
+      "module": "lxml",
+      "installed": true,
+      "version": "6.1.1"
+    },
+    {
+      "package": "filetype",
+      "module": "filetype",
+      "installed": true,
+      "version": "1.2.0"
+    },
+    {
+      "package": "openpyxl",
+      "module": "openpyxl",
+      "installed": true,
+      "version": "3.1.5"
+    },
+    {
+      "package": "pandas",
+      "module": "pandas",
+      "installed": true,
+      "version": "3.0.3"
+    },
+    {
+      "package": "python-docx",
+      "module": "docx",
+      "installed": true,
+      "version": "1.2.0"
+    }
+  ]
+}
