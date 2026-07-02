@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Callable
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 BASE_SCHEMA = """
 PRAGMA foreign_keys = ON;
@@ -131,7 +131,35 @@ def _migration_3(conn: sqlite3.Connection) -> None:
     conn.execute("INSERT OR IGNORE INTO schema_migrations (version) VALUES (3)")
 
 
-MIGRATIONS: dict[int, Migration] = {2: _migration_2, 3: _migration_3}
+def _migration_4(conn: sqlite3.Connection) -> None:
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+    additions = {
+        "attempts": "ALTER TABLE jobs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
+        "max_attempts": "ALTER TABLE jobs ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 3",
+        "last_error_at": "ALTER TABLE jobs ADD COLUMN last_error_at TEXT",
+        "leased_by": "ALTER TABLE jobs ADD COLUMN leased_by TEXT",
+        "lease_expires_at": "ALTER TABLE jobs ADD COLUMN lease_expires_at TEXT",
+    }
+    for column, sql in additions.items():
+        if column not in existing:
+            conn.execute(sql)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS job_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id INTEGER NOT NULL REFERENCES jobs(id),
+            from_status TEXT,
+            to_status TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            detail_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+        """
+    )
+    conn.execute("INSERT OR IGNORE INTO schema_migrations (version) VALUES (4)")
+
+
+MIGRATIONS: dict[int, Migration] = {2: _migration_2, 3: _migration_3, 4: _migration_4}
 
 
 def connect(db_path: str | Path) -> sqlite3.Connection:

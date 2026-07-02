@@ -55,6 +55,20 @@ def list_jobs(status: str | None = None) -> dict[str, object]:
     return {"jobs": _repo().list_jobs(status=status)}
 
 
+@router.get("/jobs/stats")
+def job_stats() -> dict[str, object]:
+    return {"stats": _repo().job_stats()}
+
+
+@router.get("/jobs/{job_id}/events")
+def list_job_events(job_id: int) -> dict[str, object]:
+    try:
+        _repo().get_job(job_id)
+        return {"events": _repo().list_job_events(job_id)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.get("/reviews")
 def list_reviews(
     status: str | None = None,

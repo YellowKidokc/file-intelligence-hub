@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from pathlib import Path
 from typing import Any
 
 JsonDict = dict[str, Any]
@@ -74,12 +73,10 @@ class IntelligenceRepo:
         return self._file_record(row)
 
     def list_file_records_under(self, folder_path: str) -> list[JsonDict]:
-        normalized = str(Path(folder_path).resolve())
-        separator = "\\" if "\\" in normalized else "/"
-        prefix = normalized.rstrip("\\/") + separator + "%"
+        prefix = folder_path.rstrip("/") + "/%"
         rows = self.conn.execute(
             "SELECT * FROM file_records WHERE normalized_path = ? OR normalized_path LIKE ? ORDER BY normalized_path",
-            (normalized, prefix),
+            (folder_path, prefix),
         ).fetchall()
         return [self._file_record(row) for row in rows]
 

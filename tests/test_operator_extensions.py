@@ -68,11 +68,13 @@ def test_app_factory_registers_current_routes():
     from file_intelligence_hub.api.app import create_app
 
     app = create_app()
-    paths = {route.path for route in app.routes}
+    paths = set(app.openapi()["paths"])
 
     assert "/jobs" in paths
     assert "/reviews" in paths
     assert "/jobs/{job_id}/requeue" in paths
+    assert "/jobs/{job_id}/events" in paths
+    assert "/jobs/stats" in paths
 
 
 def _profiles(tmp_path, watched, *, folder_role="general"):

@@ -31,10 +31,10 @@ class JobManager:
         path = event.get("dest_path") if event["event_type"] == "moved" and event.get("dest_path") else event["path"]
         if event["event_type"] == "deleted" or event.get("is_directory"):
             return self.repo.update_job(job_id, status="ignored", result={"reason": "not_a_rename_candidate", "event": event})
+        self.repo.update_job(job_id, status="running")
         if not Path(path).is_file():
             return self.repo.update_job(job_id, status="failed_retryable", error=f"file not found: {path}")
 
-        self.repo.update_job(job_id, status="running")
         hash_result = hash_file(path)
         classification = classify_file(path, hash_result)
         suggestion = suggest_rename(path, classification, hash_result)
