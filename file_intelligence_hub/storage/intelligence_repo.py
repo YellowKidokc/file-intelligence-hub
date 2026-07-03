@@ -73,11 +73,18 @@ class IntelligenceRepo:
         return self._file_record(row)
 
     def list_file_records_under(self, folder_path: str) -> list[JsonDict]:
-        prefix = folder_path.rstrip("/") + "/%"
+        normalized_folder = folder_path.rstrip("/\\")
+        prefix_forward = normalized_folder + "/%"
+        prefix_backward = normalized_folder + "\\%"
         rows = self.conn.execute(
             "SELECT * FROM file_records WHERE normalized_path = ? OR normalized_path LIKE ? ORDER BY normalized_path",
-            (folder_path, prefix),
+            (normalized_folder, prefix_forward),
         ).fetchall()
+        if not rows:
+            rows = self.conn.execute(
+                "SELECT * FROM file_records WHERE normalized_path = ? OR normalized_path LIKE ? ORDER BY normalized_path",
+                (normalized_folder, prefix_backward),
+            ).fetchall()
         return [self._file_record(row) for row in rows]
 
     def upsert_folder_summary(self, summary: JsonDict) -> JsonDict:

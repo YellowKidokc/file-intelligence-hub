@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Callable
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 6
 
 BASE_SCHEMA = """
 PRAGMA foreign_keys = ON;
@@ -159,7 +159,75 @@ def _migration_4(conn: sqlite3.Connection) -> None:
     conn.execute("INSERT OR IGNORE INTO schema_migrations (version) VALUES (4)")
 
 
-MIGRATIONS: dict[int, Migration] = {2: _migration_2, 3: _migration_3, 4: _migration_4}
+def _migration_5(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS top_sources (
+            source_id TEXT PRIMARY KEY,
+            label TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            priority INTEGER NOT NULL DEFAULT 5,
+            muted INTEGER NOT NULL DEFAULT 0,
+            paused INTEGER NOT NULL DEFAULT 0,
+            metadata_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS top_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id TEXT NOT NULL,
+            source_label TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'assistant',
+            body TEXT NOT NULL,
+            priority INTEGER NOT NULL DEFAULT 5,
+            wall TEXT NOT NULL DEFAULT 'main',
+            folder TEXT NOT NULL DEFAULT 'Main',
+            pinned INTEGER NOT NULL DEFAULT 0,
+            archived INTEGER NOT NULL DEFAULT 0,
+            combined_from_json TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TRIGGER IF NOT EXISTS top_sources_updated_at
+        AFTER UPDATE ON top_sources
+        BEGIN
+            UPDATE top_sources SET updated_at = datetime('now') WHERE source_id = NEW.source_id;
+        END;
+        """
+    )
+    conn.execute("INSERT OR IGNORE INTO schema_migrations (version) VALUES (5)")
+
+
+def _migration_6(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS memory_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            body TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'api',
+            folder TEXT NOT NULL DEFAULT 'Memory',
+            tags_json TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            embedding_json TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TRIGGER IF NOT EXISTS memory_items_updated_at
+        AFTER UPDATE ON memory_items
+        BEGIN
+            UPDATE memory_items SET updated_at = datetime('now') WHERE id = NEW.id;
+        END;
+        """
+    )
+    conn.execute("INSERT OR IGNORE INTO schema_migrations (version) VALUES (6)")
+
+
+MIGRATIONS: dict[int, Migration] = {2: _migration_2, 3: _migration_3, 4: _migration_4, 5: _migration_5, 6: _migration_6}
 
 
 def connect(db_path: str | Path) -> sqlite3.Connection:

@@ -75,6 +75,13 @@ def test_app_factory_registers_current_routes():
     assert "/jobs/{job_id}/requeue" in paths
     assert "/jobs/{job_id}/events" in paths
     assert "/jobs/stats" in paths
+    assert "/memory/items" in paths
+    assert "/memory/embed-pending" in paths
+    assert "/memory/search" in paths
+    assert "/operator/commands" in paths
+    assert "/operator/file-actions" in paths
+    assert "/top-of-mind/messages" in paths
+    assert "/top-of-mind/controls/end-all" in paths
 
 
 def _profiles(tmp_path, watched, *, folder_role="general"):

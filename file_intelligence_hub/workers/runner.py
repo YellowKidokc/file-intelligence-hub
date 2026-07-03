@@ -9,6 +9,8 @@ from file_intelligence_hub.core.job_manager import JobManager
 from file_intelligence_hub.storage.db import Database
 from file_intelligence_hub.storage.intelligence_repo import IntelligenceRepo
 from file_intelligence_hub.storage.job_repo import JobRepo
+from file_intelligence_hub.workers.command_worker import execute_command_line
+from file_intelligence_hub.workers.file_action_worker import execute_file_action
 from file_intelligence_hub.workers.folder_summary_worker import FolderSummaryWorker
 
 
@@ -35,6 +37,29 @@ class WorkerRunner:
             except FileNotFoundError as exc:
                 return self.repo.update_job(job["id"], status="failed_retryable", error=str(exc))
             except (PermissionError, OSError, ValueError) as exc:
+                return self.repo.update_job(job["id"], status="failed_terminal", error=str(exc))
+        if job["type"] == "file_action":
+            try:
+                result = execute_file_action(job["payload"])
+                self.repo.add_ledger_entry(
+                    job_id=job["id"],
+                    action=f"file_action:{job['payload']['action']}",
+                    before=job["payload"],
+                    after=result,
+                )
+                return self.repo.update_job(job["id"], status="completed", result=result)
+            except FileNotFoundError as exc:
+                return self.repo.update_job(job["id"], status="failed_retryable", error=str(exc))
+            except (FileExistsError, PermissionError, OSError, ValueError) as exc:
+                return self.repo.update_job(job["id"], status="failed_terminal", error=str(exc))
+        if job["type"] == "command_line":
+            try:
+                result = execute_command_line(job["payload"])
+                self.repo.add_ledger_entry(job_id=job["id"], action="command_line", before=job["payload"], after=result)
+                return self.repo.update_job(job["id"], status="completed", result=result)
+            except FileNotFoundError as exc:
+                return self.repo.update_job(job["id"], status="failed_retryable", error=str(exc))
+            except (PermissionError, OSError, TimeoutError, ValueError) as exc:
                 return self.repo.update_job(job["id"], status="failed_terminal", error=str(exc))
         return self.repo.update_job(job["id"], status="failed_terminal", error=f"unsupported job type: {job['type']}")
 

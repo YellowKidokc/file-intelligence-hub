@@ -71,6 +71,6 @@ def test_polling_watcher_detects_create_and_feeds_manager(tmp_path):
 def test_schema_version_migration_is_recorded(tmp_path):
     db = Database(tmp_path / "hub.sqlite3")
 
-    assert current_version(db.conn) == 4
+    assert current_version(db.conn) == 6
     rows = db.conn.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall()
-    assert [row["version"] for row in rows] == [1, 2, 3, 4]
+    assert [row["version"] for row in rows] == [1, 2, 3, 4, 5, 6]

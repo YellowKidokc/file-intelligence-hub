@@ -12,6 +12,7 @@ A local control-plane for file-first automation. The hub observes file activity,
 - `intelligence/`: canonical file facts and compressed folder pattern builders.
 - `services/`: operational node health and safe repair logic.
 - `config/` and `rules/`: centralized policy inputs; watched folders do not contain local scripts.
+- `docs/top-of-mind/` and `config/top_of_mind/`: multi-agent relay notes and source/folder/wall setup for AI, clipboard, and MCP-style controls.
 
 ## Local commands
 
@@ -22,6 +23,12 @@ fihub-poll --profiles config/folder_profiles.json --once
 fihub-worker --limit 1
 fihub-health --db .data/file-intelligence-hub.sqlite3
 ```
+
+## Top of Mind API
+
+The Top of Mind relay lives under `/top-of-mind` and gives other programs one API lane for registering sources, posting messages, pinning/moving items, combining selected messages, and stopping active sources.
+
+See `docs/top-of-mind-api-blueprint.md` for the full API brain map: hub routes, desktop bridges, memory/vectorization, file operators, integrations, and security rules.
 
 ## Packaging note
 
